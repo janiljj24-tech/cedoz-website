@@ -8,7 +8,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type EmployeeStatus = 'interviewing' | 'offer_sent' | 'offer_accepted' | 'offer_rejected' | 'onboarded';
+type EmployeeStatus = 
+  | 'interviewing' 
+  | 'interview_passed' 
+  | 'interview_failed' 
+  | 'offer_sent' 
+  | 'offer_accepted' 
+  | 'offer_rejected' 
+  | 'onboarded';
 
 interface Employee {
   id: string;
@@ -41,7 +48,7 @@ export default function EmployeeManagementPage() {
   // New Candidate Form State
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '', position: '' });
 
-  // 1. Fetch Employees from Supabase
+  // Fetch Employees from Supabase
   const fetchEmployees = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -58,7 +65,7 @@ export default function EmployeeManagementPage() {
     fetchEmployees();
   }, []);
 
-  // 2. Add Candidate to Supabase DB
+  // 1. Add Candidate (Default status: interviewing)
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('employees').insert([
@@ -77,7 +84,19 @@ export default function EmployeeManagementPage() {
     }
   };
 
-  // 3. Update Salary & Send Offer
+  // 2. Mark Candidate as Pass or Fail
+  const handleInterviewResult = async (id: string, result: 'passed' | 'failed') => {
+    const newStatus: EmployeeStatus = result === 'passed' ? 'interview_passed' : 'interview_failed';
+    const { error } = await supabase
+      .from('employees')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) alert('Error updating interview result: ' + error.message);
+    else fetchEmployees();
+  };
+
+  // 3. Create & Send Offer Letter (Only available after passing)
   const handleSendOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp) return;
@@ -110,7 +129,7 @@ export default function EmployeeManagementPage() {
     else fetchEmployees();
   };
 
-  // 5. Complete Onboarding & Upload ID File to Supabase Storage
+  // 5. Complete Onboarding & Upload ID File
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp || !idFile) {
@@ -121,7 +140,6 @@ export default function EmployeeManagementPage() {
     setUploading(true);
 
     try {
-      // Step A: Upload File to Supabase Bucket 'employee-ids'
       const fileExt = idFile.name.split('.').pop();
       const fileName = `${selectedEmp.id}-${Date.now()}.${fileExt}`;
       const filePath = `id-proofs/${fileName}`;
@@ -132,14 +150,12 @@ export default function EmployeeManagementPage() {
 
       if (uploadError) throw uploadError;
 
-      // Step B: Get Public URL of the uploaded document
       const { data: urlData } = supabase.storage
         .from('employee-ids')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // Step C: Update Employee Record in DB
       const { error: dbError } = await supabase
         .from('employees')
         .update({
@@ -172,7 +188,7 @@ export default function EmployeeManagementPage() {
         <div>
           <h1 className="text-3xl font-extrabold text-white">Employee Lifecycle Management</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Manage candidate interviews, issue offer letters, track acceptances, and onboard staff with permanent cloud documents.
+            Evaluate candidate interviews, issue offer letters to qualified applicants, and manage onboarding.
           </p>
         </div>
         <button
@@ -233,7 +249,26 @@ export default function EmployeeManagementPage() {
                       </td>
 
                       <td className="p-4 text-right space-x-2">
+                        {/* Stage 1: Interview Assessment */}
                         {emp.status === 'interviewing' && (
+                          <>
+                            <button
+                              onClick={() => handleInterviewResult(emp.id, 'passed')}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md transition"
+                            >
+                              ✓ Pass
+                            </button>
+                            <button
+                              onClick={() => handleInterviewResult(emp.id, 'failed')}
+                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-md transition"
+                            >
+                              ✕ Fail
+                            </button>
+                          </>
+                        )}
+
+                        {/* Stage 2: Create Offer Letter (ONLY SHOWS IF PASSED) */}
+                        {emp.status === 'interview_passed' && (
                           <button
                             onClick={() => {
                               setSelectedEmp(emp);
@@ -245,6 +280,12 @@ export default function EmployeeManagementPage() {
                           </button>
                         )}
 
+                        {/* Rejected Candidate Notice */}
+                        {emp.status === 'interview_failed' && (
+                          <span className="text-xs text-slate-500 italic">Interview Failed</span>
+                        )}
+
+                        {/* Stage 3: Track Offer Acceptance */}
                         {emp.status === 'offer_sent' && (
                           <>
                             <button
@@ -262,6 +303,7 @@ export default function EmployeeManagementPage() {
                           </>
                         )}
 
+                        {/* Stage 4: Onboarding */}
                         {emp.status === 'offer_accepted' && (
                           <button
                             onClick={() => {
@@ -274,6 +316,7 @@ export default function EmployeeManagementPage() {
                           </button>
                         )}
 
+                        {/* Stage 5: Fully Onboarded */}
                         {emp.status === 'onboarded' && emp.id_proof_url && (
                           <a
                             href={emp.id_proof_url}
@@ -431,14 +474,18 @@ export default function EmployeeManagementPage() {
 function StatusBadge({ status }: { status: EmployeeStatus }) {
   const styles = {
     interviewing: 'bg-amber-950/60 text-amber-400 border-amber-800/60',
+    interview_passed: 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60',
+    interview_failed: 'bg-rose-950/60 text-rose-400 border-rose-800/60',
     offer_sent: 'bg-blue-950/60 text-blue-400 border-blue-800/60',
     offer_accepted: 'bg-purple-950/60 text-purple-400 border-purple-800/60',
     offer_rejected: 'bg-rose-950/60 text-rose-400 border-rose-800/60',
-    onboarded: 'bg-emerald-950/60 text-emerald-400 border-emerald-800/60'
+    onboarded: 'bg-teal-950/60 text-teal-400 border-teal-800/60'
   };
 
   const labels = {
-    interviewing: 'Interviewing',
+    interviewing: 'Interview Scheduled',
+    interview_passed: 'Passed Interview',
+    interview_failed: 'Failed Interview',
     offer_sent: 'Offer Sent',
     offer_accepted: 'Offer Accepted',
     offer_rejected: 'Offer Declined',
