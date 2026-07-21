@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Helper function to lazily initialize Supabase client
+const getSupabaseClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+};
 
 type EmployeeStatus = 
   | 'interviewing' 
@@ -62,7 +65,7 @@ interface Employee {
 
 function EmployeeManagementContent() {
   const searchParams = useSearchParams();
-  const filter = searchParams.get('filter'); // 'new', 'interviewing', 'offers', 'onboarding', 'staff'
+  const filter = searchParams.get('filter');
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,12 +83,12 @@ function EmployeeManagementContent() {
 
   // Staff Editing / Profile State
   const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
-  
-  // State for Managing Multiple Academic Records
   const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
 
   // New Candidate Form State
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '', position: '' });
+
+  const supabase = getSupabaseClient();
 
   // Fetch Employees from Supabase
   const fetchEmployees = async () => {
@@ -107,7 +110,6 @@ function EmployeeManagementContent() {
   // Filter employees based on active submenu
   const filteredEmployees = employees.filter((emp) => {
     if (filter === 'new' || !filter) {
-      // Show ONLY new candidates scheduled for interview
       return emp.status === 'interviewing';
     }
     if (filter === 'interviewing') {
@@ -134,7 +136,6 @@ function EmployeeManagementContent() {
     return 'Employee Management';
   };
 
-  // Add Candidate
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('employees').insert([{ ...newCandidate, status: 'interviewing' }]);
@@ -147,7 +148,6 @@ function EmployeeManagementContent() {
     }
   };
 
-  // Update Status
   const handleInterviewResult = async (id: string, result: 'passed' | 'failed') => {
     const newStatus: EmployeeStatus = result === 'passed' ? 'interview_passed' : 'interview_failed';
     const { error } = await supabase.from('employees').update({ status: newStatus }).eq('id', id);
@@ -155,7 +155,6 @@ function EmployeeManagementContent() {
     else fetchEmployees();
   };
 
-  // Send Offer
   const handleSendOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp) return;
@@ -178,7 +177,6 @@ function EmployeeManagementContent() {
     else fetchEmployees();
   };
 
-  // Onboard Submit
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp || !idFile) {
@@ -213,14 +211,14 @@ function EmployeeManagementContent() {
       setJoiningDateInput('');
       setIdFile(null);
       fetchEmployees();
-    } catch (err: any) {
-      alert('Onboarding failed: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert('Onboarding failed: ' + error.message);
     } finally {
       setUploading(false);
     }
   };
 
-  // Add Blank Academic Row
   const handleAddAcademicRow = () => {
     setAcademicRecords([
       ...academicRecords,
@@ -233,12 +231,10 @@ function EmployeeManagementContent() {
     ]);
   };
 
-  // Remove Academic Row
   const handleRemoveAcademicRow = (id: string) => {
     setAcademicRecords(academicRecords.filter((rec) => rec.id !== id));
   };
 
-  // Upload Individual Certificate File
   const handleCertificateUpload = async (index: number, file: File) => {
     if (!selectedEmp) return;
     setUploading(true);
@@ -255,14 +251,14 @@ function EmployeeManagementContent() {
       const updatedRecords = [...academicRecords];
       updatedRecords[index].certificate_url = certData.publicUrl;
       setAcademicRecords(updatedRecords);
-    } catch (err: any) {
-      alert('Failed to upload certificate: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert('Failed to upload certificate: ' + error.message);
     } finally {
       setUploading(false);
     }
   };
 
-  // Save / Edit Full Staff Details
   const handleSaveStaffDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp) return;
@@ -282,8 +278,9 @@ function EmployeeManagementContent() {
       alert('Employee details updated successfully!');
       setActiveModal(null);
       fetchEmployees();
-    } catch (err: any) {
-      alert('Failed to save details: ' + err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert('Failed to save details: ' + error.message);
     } finally {
       setUploading(false);
     }
@@ -373,7 +370,6 @@ function EmployeeManagementContent() {
                       </td>
 
                       <td className="p-4 text-right space-x-2">
-                        {/* Interview Stage */}
                         {emp.status === 'interviewing' && (
                           <>
                             <button
@@ -444,7 +440,6 @@ function EmployeeManagementContent() {
                           </button>
                         )}
 
-                        {/* STAFF SPECIFIC ACTIONS */}
                         {emp.status === 'onboarded' && (
                           <>
                             <button
@@ -552,7 +547,42 @@ function EmployeeManagementContent() {
         </Modal>
       )}
 
-      {/* --- MODAL 3: ONBOARDING --- */}
+      {/* --- MODAL 3: VIEW / PRINT OFFER LETTER --- */}
+      {activeModal === 'view_offer' && selectedEmp && (
+        <Modal title={`Offer Letter Preview — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
+          <div className="space-y-4">
+            <div id="printable-offer-letter" className="p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-4 text-xs text-slate-200">
+              <div className="border-b border-slate-700 pb-3 flex justify-between items-center">
+                <h4 className="text-lg font-extrabold text-[#38bdf8]">CEDOZ ENTERPRISES</h4>
+                <span className="text-slate-400">Official Document</span>
+              </div>
+              <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+              <p><strong>To:</strong> {selectedEmp.name} ({selectedEmp.email})</p>
+              <p className="leading-relaxed">
+                We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at CEDOZ. 
+                Your starting salary for this position will be <strong>{selectedEmp.offered_salary || 'As Agreed'}</strong>.
+              </p>
+              <p className="leading-relaxed">
+                Please confirm your acceptance of this offer letter at your earliest convenience.
+              </p>
+              <div className="pt-6 border-t border-slate-800 flex justify-between text-slate-400">
+                <p>HR Department</p>
+                <p>CEDOZ Management</p>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="w-full py-2.5 bg-[#F26522] hover:bg-[#d95516] font-bold text-white rounded-lg transition text-sm no-print"
+            >
+              🖨 Print / Download PDF
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* --- MODAL 4: ONBOARDING --- */}
       {activeModal === 'onboard' && selectedEmp && (
         <Modal title={`Complete Onboarding — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleOnboardSubmit} className="space-y-4">
@@ -597,12 +627,10 @@ function EmployeeManagementContent() {
         </Modal>
       )}
 
-      {/* --- MODAL 4: VIEW FULL STAFF PROFILE --- */}
+      {/* --- MODAL 5: VIEW FULL STAFF PROFILE --- */}
       {activeModal === 'view_staff' && selectedEmp && (
         <Modal title={`Staff Profile — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1">
-            
-            {/* Personal Details Section */}
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
               <h3 className="text-sm font-bold text-[#38bdf8] uppercase tracking-wider">👤 Personal Details</h3>
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
@@ -618,7 +646,6 @@ function EmployeeManagementContent() {
               </div>
             </div>
 
-            {/* Multiple Academic Qualifications Display */}
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
               <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">🎓 Academic Qualifications</h3>
               {selectedEmp.academic_records && selectedEmp.academic_records.length > 0 ? (
@@ -643,7 +670,6 @@ function EmployeeManagementContent() {
               )}
             </div>
 
-            {/* Remuneration & ID Proof Details */}
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
               <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider">💰 Remuneration & ID</h3>
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
@@ -678,12 +704,10 @@ function EmployeeManagementContent() {
         </Modal>
       )}
 
-      {/* --- MODAL 5: EDIT STAFF DETAILS (WITH MULTIPLE ACADEMIC RECORDS) --- */}
+      {/* --- MODAL 6: EDIT STAFF DETAILS --- */}
       {activeModal === 'edit_staff' && selectedEmp && (
         <Modal title={`Edit Profile — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleSaveStaffDetails} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
-            
-            {/* 1. Personal Info */}
             <div className="space-y-3 border-b border-slate-800 pb-4">
               <p className="font-bold text-[#38bdf8] text-sm">Personal Information</p>
               <div className="grid grid-cols-2 gap-3">
@@ -751,7 +775,6 @@ function EmployeeManagementContent() {
               </div>
             </div>
 
-            {/* 2. Multiple Academic Qualifications Section */}
             <div className="space-y-4 border-b border-slate-800 pb-4">
               <div className="flex justify-between items-center">
                 <p className="font-bold text-emerald-400 text-sm">Academic Qualifications</p>
@@ -850,7 +873,6 @@ function EmployeeManagementContent() {
               )}
             </div>
 
-            {/* 3. Salary Info */}
             <div className="space-y-3 pb-2">
               <p className="font-bold text-amber-400 text-sm">Salary & Structure</p>
               <div className="grid grid-cols-2 gap-3">
