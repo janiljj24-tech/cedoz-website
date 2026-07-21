@@ -35,14 +35,19 @@ export default function RunningProjects() {
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchRunningProjects = async () => {
+    setLoading(true);
+    
+    // Updated to match various potential running statuses from Supabase
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('status', 'running')
+      .in('status', ['running', 'RUNNING', 'in_progress', 'In Progress', 'active'])
       .order('created_at', { ascending: false });
 
     if (!error && data) {
       setProjects(data as Project[]);
+    } else if (error) {
+      console.error('Error fetching running projects:', error.message);
     }
     setLoading(false);
   };
@@ -234,12 +239,12 @@ export default function RunningProjects() {
 
                   <div>
                     <span style={{ color: '#64748b', display: 'block' }}>Final Amount</span>
-                    <strong>{p.final_project_amount ? `$${p.final_project_amount}` : 'N/A'}</strong>
+                    <strong>{p.final_project_amount ? `₹${p.final_project_amount}` : 'N/A'}</strong>
                   </div>
 
                   <div>
                     <span style={{ color: '#64748b', display: 'block' }}>Advance Amount</span>
-                    <strong>{p.advance_amount ? `$${p.advance_amount}` : '$0'}</strong>
+                    <strong>{p.advance_amount ? `₹${p.advance_amount}` : '₹0'}</strong>
                   </div>
 
                   <div>
@@ -380,7 +385,7 @@ export default function RunningProjects() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.25rem' }}>
-                    Final Project Amount ($)
+                    Final Project Amount (₹)
                   </label>
                   <input
                     type="number"
@@ -399,7 +404,7 @@ export default function RunningProjects() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.25rem' }}>
-                  Advance Amount ($)
+                  Advance Amount (₹)
                 </label>
                 <input
                   type="number"
