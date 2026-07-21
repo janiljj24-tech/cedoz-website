@@ -36,7 +36,7 @@ export default function EmployeeManagementPage() {
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
 
   // Modal Control States
-  const [activeModal, setActiveModal] = useState<'offer' | 'onboard' | 'add' | null>(null);
+  const [activeModal, setActiveModal] = useState<'offer' | 'view_offer' | 'onboard' | 'add' | null>(null);
 
   // Form Input States
   const [salaryInput, setSalaryInput] = useState('');
@@ -65,7 +65,7 @@ export default function EmployeeManagementPage() {
     fetchEmployees();
   }, []);
 
-  // 1. Add Candidate (Default status: interviewing)
+  // 1. Add Candidate
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('employees').insert([
@@ -96,7 +96,7 @@ export default function EmployeeManagementPage() {
     else fetchEmployees();
   };
 
-  // 3. Create & Send Offer Letter (Only available after passing)
+  // 3. Create & Send Offer Letter
   const handleSendOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmp) return;
@@ -180,15 +180,44 @@ export default function EmployeeManagementPage() {
     }
   };
 
+  // 6. Trigger Browser Print to Save Offer Letter as PDF
+  const handlePrintOfferLetter = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-8 font-sans">
       
+      {/* Printable Area Specific Styling */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-offer-letter, #printable-offer-letter * {
+            visibility: visible;
+          }
+          #printable-offer-letter {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            color: black !important;
+            padding: 20px;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-white">Employee Lifecycle Management</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Evaluate candidate interviews, issue offer letters to qualified applicants, and manage onboarding.
+            Evaluate candidate interviews, generate/view offer letters, and handle onboarding.
           </p>
         </div>
         <button
@@ -249,7 +278,7 @@ export default function EmployeeManagementPage() {
                       </td>
 
                       <td className="p-4 text-right space-x-2">
-                        {/* Stage 1: Interview Assessment */}
+                        {/* Interview Stage */}
                         {emp.status === 'interviewing' && (
                           <>
                             <button
@@ -267,7 +296,7 @@ export default function EmployeeManagementPage() {
                           </>
                         )}
 
-                        {/* Stage 2: Create Offer Letter (ONLY SHOWS IF PASSED) */}
+                        {/* Interview Passed -> Create Offer */}
                         {emp.status === 'interview_passed' && (
                           <button
                             onClick={() => {
@@ -280,12 +309,25 @@ export default function EmployeeManagementPage() {
                           </button>
                         )}
 
-                        {/* Rejected Candidate Notice */}
+                        {/* Interview Failed */}
                         {emp.status === 'interview_failed' && (
                           <span className="text-xs text-slate-500 italic">Interview Failed</span>
                         )}
 
-                        {/* Stage 3: Track Offer Acceptance */}
+                        {/* Offer Sent / Accepted / Onboarded -> View & Download Offer Letter Option */}
+                        {['offer_sent', 'offer_accepted', 'onboarded'].includes(emp.status) && (
+                          <button
+                            onClick={() => {
+                              setSelectedEmp(emp);
+                              setActiveModal('view_offer');
+                            }}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-md border border-slate-700 transition"
+                          >
+                            👁 View Offer
+                          </button>
+                        )}
+
+                        {/* Track Acceptance */}
                         {emp.status === 'offer_sent' && (
                           <>
                             <button
@@ -303,7 +345,7 @@ export default function EmployeeManagementPage() {
                           </>
                         )}
 
-                        {/* Stage 4: Onboarding */}
+                        {/* Onboard Action */}
                         {emp.status === 'offer_accepted' && (
                           <button
                             onClick={() => {
@@ -316,7 +358,7 @@ export default function EmployeeManagementPage() {
                           </button>
                         )}
 
-                        {/* Stage 5: Fully Onboarded */}
+                        {/* View ID Proof Document */}
                         {emp.status === 'onboarded' && emp.id_proof_url && (
                           <a
                             href={emp.id_proof_url}
@@ -421,7 +463,75 @@ export default function EmployeeManagementPage() {
         </Modal>
       )}
 
-      {/* --- MODAL 3: ONBOARDING & ID PROOF UPLOAD --- */}
+      {/* --- MODAL 3: VIEW & DOWNLOAD OFFER LETTER --- */}
+      {activeModal === 'view_offer' && selectedEmp && (
+        <Modal title="Official Offer Letter Preview" onClose={() => setActiveModal(null)}>
+          <div className="space-y-6">
+            
+            {/* Printable Letter Container */}
+            <div id="printable-offer-letter" className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 shadow-inner text-sm space-y-4">
+              <div className="border-b border-slate-200 pb-4 flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-extrabold text-[#0C1B4B]">CEDOZ</h2>
+                  <p className="text-xs text-slate-500">Community Empowerment & Development Organization</p>
+                </div>
+                <div className="text-right text-xs text-slate-500">
+                  <p>Date: {new Date().toLocaleDateString()}</p>
+                  <p>Ref: OFF-{selectedEmp.id.slice(0, 6).toUpperCase()}</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="font-bold text-base text-slate-800">To: {selectedEmp.name}</p>
+                <p className="text-slate-600 text-xs">Email: {selectedEmp.email}</p>
+                <p className="text-slate-600 text-xs">Phone: {selectedEmp.phone}</p>
+              </div>
+
+              <p className="text-slate-700 leading-relaxed text-xs">
+                Dear <strong>{selectedEmp.name}</strong>,<br /><br />
+                We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at <strong>CEDOZ</strong>. 
+                Following your interview, we are confident that your skills will contribute significantly to our mission.
+              </p>
+
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
+                <p className="text-xs text-slate-500 uppercase font-bold">Offer Summary</p>
+                <p className="text-sm font-semibold">Position: <span className="text-[#0087A1]">{selectedEmp.position}</span></p>
+                <p className="text-sm font-semibold">Offered Remuneration: <span className="text-[#F26522]">{selectedEmp.offered_salary || 'As Agreed'}</span></p>
+                {selectedEmp.joining_date && (
+                  <p className="text-sm font-semibold">Joining Date: <span className="text-slate-800">{selectedEmp.joining_date}</span></p>
+                )}
+              </div>
+
+              <p className="text-slate-600 text-xs">
+                Please review the terms and confirm your acceptance. Welcome to the team!
+              </p>
+
+              <div className="pt-6 flex justify-between items-end border-t border-slate-200">
+                <div>
+                  <p className="font-bold text-xs">Authorized Signature</p>
+                  <p className="text-xs text-slate-500">HR & Operations Dept.</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-400">CEDOZ Corporate Portal</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button: Download/Print */}
+            <div className="flex gap-3 no-print">
+              <button
+                onClick={handlePrintOfferLetter}
+                className="flex-1 py-3 bg-[#0087A1] hover:bg-[#00738a] text-white font-bold rounded-lg transition text-sm flex items-center justify-center gap-2"
+              >
+                📥 Download / Print Offer PDF
+              </button>
+            </div>
+
+          </div>
+        </Modal>
+      )}
+
+      {/* --- MODAL 4: ONBOARDING & ID PROOF UPLOAD --- */}
       {activeModal === 'onboard' && selectedEmp && (
         <Modal title={`Onboarding Details — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleOnboardSubmit} className="space-y-4">
@@ -502,8 +612,8 @@ function StatusBadge({ status }: { status: EmployeeStatus }) {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+      <div className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-3 no-print">
           <h3 className="text-lg font-bold text-white">{title}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white font-bold">
             ✕
