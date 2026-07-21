@@ -13,6 +13,7 @@ const supabase = createClient(
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
+  const [isEmployeeMenuOpen, setIsEmployeeMenuOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   const handleLogout = async () => {
@@ -85,6 +86,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
             {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Edit Content</span>}
           </Link>
+
+          {/* Employee Management Collapsible Parent */}
+          <div>
+            <div 
+              onClick={() => setIsEmployeeMenuOpen(!isEmployeeMenuOpen)}
+              style={{ color: '#94a3b8', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: isSidebarHovered ? 'space-between' : 'center', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>👔</span>
+                {isSidebarHovered && <span style={{ fontWeight: 500, color: '#ffffff', whiteSpace: 'nowrap' }}>Employees</span>}
+              </div>
+              {isSidebarHovered && <span>{isEmployeeMenuOpen ? '▼' : '►'}</span>}
+            </div>
+
+            {/* Employee Submenu Group */}
+            {isEmployeeMenuOpen && isSidebarHovered && (
+              <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
+                <Link href="/dashboard/employees" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                  👥 Pipeline & Onboarding
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Projects Collapsible Parent */}
           <div>
