@@ -13,19 +13,15 @@ const supabase = createClient(
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
-  const [isEmployeeMenuOpen, setIsEmployeeMenuOpen] = useState(true); // Open by default
+  const [isEmployeeMenuOpen, setIsEmployeeMenuOpen] = useState(false);
+  const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(true); // Open finance by default
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   const handleLogout = async () => {
     try {
-      // 1. Sign out from Supabase
       await supabase.auth.signOut();
-
-      // 2. Clear client-side storage
       localStorage.clear();
       sessionStorage.clear();
-
-      // 3. Redirect to Home Page
       router.push('/');
       router.refresh();
     } catch (error) {
@@ -78,14 +74,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
             {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Dashboard</span>}
           </Link>
-          
-          {/* Edit Content */}
-          <Link href="/dashboard/content" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ width: '14px', height: '16px', border: '2px solid currentColor', borderRadius: '2px', position: 'relative', display: 'inline-block', flexShrink: 0, marginLeft: '1px' }}>
-              <span style={{ position: 'absolute', top: '3px', left: '3px', width: '4px', height: '2px', backgroundColor: 'currentColor' }}></span>
-            </span>
-            {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Edit Content</span>}
-          </Link>
+
+          {/* Finance Collapsible Parent */}
+          <div>
+            <div 
+              onClick={() => setIsFinanceMenuOpen(!isFinanceMenuOpen)}
+              style={{ color: '#94a3b8', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: isSidebarHovered ? 'space-between' : 'center', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>💰</span>
+                {isSidebarHovered && <span style={{ fontWeight: 500, color: '#ffffff', whiteSpace: 'nowrap' }}>Finance</span>}
+              </div>
+              {isSidebarHovered && <span>{isFinanceMenuOpen ? '▼' : '►'}</span>}
+            </div>
+
+            {/* Finance Submenu Group */}
+            {isFinanceMenuOpen && isSidebarHovered && (
+              <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
+                <Link href="/dashboard/finance?tab=project" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  📊 Project Finance
+                </Link>
+                <Link href="/dashboard/finance?tab=office" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  🏢 Office Expenses
+                </Link>
+                <Link href="/dashboard/finance?tab=other" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  💸 Other Expenses
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Employee Management Collapsible Parent */}
           <div>
@@ -113,10 +130,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   ✉️ Offer Letters
                 </Link>
                 <Link href="/dashboard/employees?filter=onboarding" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                  📑 Onboarding 
+                  📑 Onboarding
                 </Link>
-                <Link href="/dashboard/employees?filter=staff" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                  👨‍💼 Staff Members
+                <Link href="/dashboard/employees?filter=staff" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  🏢 Staff Members
                 </Link>
               </div>
             )}
@@ -180,7 +197,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Framework Container */}
       <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Top Header Bar */}
         <header style={{ height: '70px', backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 2rem', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <span style={{ fontSize: '0.875rem', color: '#64748b' }}>Logged in as Portal Admin</span>
@@ -188,7 +204,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        {/* Page Content */}
         <main style={{ padding: '2rem', flexGrow: 1 }}>
           {children}
         </main>
