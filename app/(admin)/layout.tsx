@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   ✉️ Offer Letters
                 </Link>
                 <Link href="/dashboard/employees?filter=onboarding" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                  📑 Onboarding & IDs
+                  📑 Onboarding 
                 </Link>
               </div>
             )}

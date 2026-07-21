@@ -78,7 +78,8 @@ function EmployeeManagementContent() {
       return ['offer_sent', 'offer_accepted', 'offer_rejected'].includes(emp.status);
     }
     if (filter === 'onboarding') {
-      return emp.status === 'onboarded';
+      // Includes both candidates who accepted their offer and fully onboarded staff
+      return ['offer_accepted', 'onboarded'].includes(emp.status);
     }
     return true; // Default: show all pipeline
   });
@@ -87,7 +88,7 @@ function EmployeeManagementContent() {
   const getPageTitle = () => {
     if (filter === 'interviewing') return 'Interviews & Assessments';
     if (filter === 'offers') return 'Offer Letters';
-    if (filter === 'onboarding') return 'Onboarding & ID Proofs';
+    if (filter === 'onboarding') return 'Onboarding';
     return 'Employee Lifecycle Management';
   };
 
@@ -245,7 +246,7 @@ function EmployeeManagementContent() {
           <p className="text-sm text-slate-400 mt-1">
             {filter === 'interviewing' && 'Track candidates currently in assessment or interview stage.'}
             {filter === 'offers' && 'Manage issued offer letters, track acceptances, and preview official documentation.'}
-            {filter === 'onboarding' && 'View fully onboarded employees along with their submitted identification files.'}
+            {filter === 'onboarding' && 'Collect personal details and ID proofs for candidates who have accepted their offer.'}
             {!filter && 'Full candidate and employee lifecycle management pipeline.'}
           </p>
         </div>
