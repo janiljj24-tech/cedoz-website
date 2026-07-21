@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -30,7 +31,10 @@ interface Employee {
   id_proof_url?: string;
 }
 
-export default function EmployeeManagementPage() {
+function EmployeeManagementContent() {
+  const searchParams = useSearchParams();
+  const filter = searchParams.get('filter'); // 'interviewing', 'offers', or 'onboarding'
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
@@ -64,6 +68,28 @@ export default function EmployeeManagementPage() {
   useEffect(() => {
     fetchEmployees();
   }, []);
+
+  // Filter employees based on active submenu
+  const filteredEmployees = employees.filter((emp) => {
+    if (filter === 'interviewing') {
+      return ['interviewing', 'interview_passed', 'interview_failed'].includes(emp.status);
+    }
+    if (filter === 'offers') {
+      return ['offer_sent', 'offer_accepted', 'offer_rejected'].includes(emp.status);
+    }
+    if (filter === 'onboarding') {
+      return emp.status === 'onboarded';
+    }
+    return true; // Default: show all pipeline
+  });
+
+  // Get Page Header Title based on filter
+  const getPageTitle = () => {
+    if (filter === 'interviewing') return 'Interviews & Assessments';
+    if (filter === 'offers') return 'Offer Letters';
+    if (filter === 'onboarding') return 'Onboarding & ID Proofs';
+    return 'Employee Lifecycle Management';
+  };
 
   // 1. Add Candidate
   const handleAddCandidate = async (e: React.FormEvent) => {
@@ -180,7 +206,7 @@ export default function EmployeeManagementPage() {
     }
   };
 
-  // 6. Trigger Browser Print to Save Offer Letter as PDF
+  // 6. Trigger Print
   const handlePrintOfferLetter = () => {
     window.print();
   };
@@ -212,12 +238,15 @@ export default function EmployeeManagementPage() {
         }
       `}</style>
 
-      {/* Header */}
+      {/* Dynamic Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-white">Employee Lifecycle Management</h1>
+          <h1 className="text-3xl font-extrabold text-white">{getPageTitle()}</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Evaluate candidate interviews, generate/view offer letters with official branding, and handle onboarding.
+            {filter === 'interviewing' && 'Track candidates currently in assessment or interview stage.'}
+            {filter === 'offers' && 'Manage issued offer letters, track acceptances, and preview official documentation.'}
+            {filter === 'onboarding' && 'View fully onboarded employees along with their submitted identification files.'}
+            {!filter && 'Full candidate and employee lifecycle management pipeline.'}
           </p>
         </div>
         <button
@@ -228,16 +257,17 @@ export default function EmployeeManagementPage() {
         </button>
       </div>
 
-      {/* Employee Pipeline Table */}
+      {/* Employee Table */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">Candidate & Staff Pipeline</h2>
-          <span className="text-xs text-slate-400">Total: {employees.length} Records</span>
+          <h2 className="text-lg font-bold text-white">
+            {filter ? `${getPageTitle()} (${filteredEmployees.length})` : `All Candidates (${filteredEmployees.length})`}
+          </h2>
         </div>
 
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading records from database...</div>
+            <div className="p-8 text-center text-slate-400">Loading records...</div>
           ) : (
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-800">
@@ -250,14 +280,14 @@ export default function EmployeeManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {employees.length === 0 ? (
+                {filteredEmployees.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-500">
-                      No candidate records found. Click "+ Add New Candidate" to get started.
+                      No records found for this category.
                     </td>
                   </tr>
                 ) : (
-                  employees.map((emp) => (
+                  filteredEmployees.map((emp) => (
                     <tr key={emp.id} className="hover:bg-slate-900/50 transition">
                       <td className="p-4">
                         <p className="font-bold text-white">{emp.name}</p>
@@ -314,7 +344,7 @@ export default function EmployeeManagementPage() {
                           <span className="text-xs text-slate-500 italic">Interview Failed</span>
                         )}
 
-                        {/* Offer Sent / Accepted / Onboarded -> View & Download Offer Letter Option */}
+                        {/* Offer Sent / Accepted / Onboarded -> View Offer */}
                         {['offer_sent', 'offer_accepted', 'onboarded'].includes(emp.status) && (
                           <button
                             onClick={() => {
@@ -463,22 +493,14 @@ export default function EmployeeManagementPage() {
         </Modal>
       )}
 
-      {/* --- MODAL 3: VIEW & DOWNLOAD OFFER LETTER (WITH LOGO) --- */}
+      {/* --- MODAL 3: VIEW OFFER LETTER --- */}
       {activeModal === 'view_offer' && selectedEmp && (
         <Modal title="Official Offer Letter Preview" onClose={() => setActiveModal(null)}>
           <div className="space-y-6">
-            
-            {/* Printable Letter Container */}
             <div id="printable-offer-letter" className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 shadow-inner text-sm space-y-4">
-              
-              {/* Header with CEDOZ Logo */}
               <div className="border-b border-slate-200 pb-4 flex justify-between items-center">
                 <div>
-                  <img 
-                    src="/logo.png" 
-                    alt="CEDOZ Official Logo" 
-                    className="h-12 w-auto object-contain mb-1" 
-                  />
+                  <img src="/logo.png" alt="CEDOZ Official Logo" className="h-12 w-auto object-contain mb-1" />
                   <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
                     Community Empowerment & Development Organization
                   </p>
@@ -498,8 +520,7 @@ export default function EmployeeManagementPage() {
 
               <p className="text-slate-700 leading-relaxed text-xs">
                 Dear <strong>{selectedEmp.name}</strong>,<br /><br />
-                We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at <strong>CEDOZ</strong>. 
-                Following your interview process, we are confident that your skills and expertise will contribute significantly to our organizational goals.
+                We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at <strong>CEDOZ</strong>.
               </p>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
@@ -511,22 +532,14 @@ export default function EmployeeManagementPage() {
                 )}
               </div>
 
-              <p className="text-slate-600 text-xs">
-                Please review the terms and confirm your acceptance. Welcome to the CEDOZ team!
-              </p>
-
               <div className="pt-6 flex justify-between items-end border-t border-slate-200">
                 <div>
                   <p className="font-bold text-xs text-slate-800">Authorized Signature</p>
                   <p className="text-xs text-slate-500">HR & Operations Dept.</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-slate-400">CEDOZ Corporate Portal</p>
-                </div>
               </div>
             </div>
 
-            {/* Action Button: Download/Print */}
             <div className="flex gap-3 no-print">
               <button
                 onClick={handlePrintOfferLetter}
@@ -535,7 +548,6 @@ export default function EmployeeManagementPage() {
                 📥 Download / Print Offer PDF
               </button>
             </div>
-
           </div>
         </Modal>
       )}
@@ -587,6 +599,14 @@ export default function EmployeeManagementPage() {
       )}
 
     </div>
+  );
+}
+
+export default function EmployeeManagementPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading page...</div>}>
+      <EmployeeManagementContent />
+    </Suspense>
   );
 }
 
