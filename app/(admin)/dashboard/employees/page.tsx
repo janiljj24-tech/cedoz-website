@@ -24,6 +24,14 @@ type AcademicLevel =
   | 'Degree (Graduation)'
   | 'PG (Post-Graduation)';
 
+interface AcademicRecord {
+  id: string;
+  academic_level: AcademicLevel;
+  institution_name: string;
+  academic_year: string;
+  certificate_url?: string;
+}
+
 interface Employee {
   id: string;
   name: string;
@@ -32,7 +40,7 @@ interface Employee {
   position: string;
   status: EmployeeStatus;
   
-  // Salary Details
+  // Remuneration Details
   offered_salary?: string;
   basic_pay?: string;
   allowances?: string;
@@ -45,13 +53,10 @@ interface Employee {
   emergency_contact?: string;
   blood_group?: string;
 
-  // Academic Details
-  academic_level?: AcademicLevel;
-  institution_name?: string;
-  academic_year?: string;
-  academic_certificate_url?: string;
+  // Array of Academic Qualifications
+  academic_records?: AcademicRecord[];
 
-  // ID Proof
+  // Identification Proof Document
   id_proof_url?: string;
 }
 
@@ -75,7 +80,9 @@ function EmployeeManagementContent() {
 
   // Staff Editing / Profile State
   const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
-  const [academicFile, setAcademicFile] = useState<File | null>(null);
+  
+  // State for Managing Multiple Academic Records
+  const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
 
   // New Candidate Form State
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '', position: '' });
@@ -208,6 +215,48 @@ function EmployeeManagementContent() {
     }
   };
 
+  // Add Blank Academic Row
+  const handleAddAcademicRow = () => {
+    setAcademicRecords([
+      ...academicRecords,
+      {
+        id: `acad-${Date.now()}`,
+        academic_level: 'Degree (Graduation)',
+        institution_name: '',
+        academic_year: ''
+      }
+    ]);
+  };
+
+  // Remove Academic Row
+  const handleRemoveAcademicRow = (id: string) => {
+    setAcademicRecords(academicRecords.filter((rec) => rec.id !== id));
+  };
+
+  // Upload Individual Certificate File
+  const handleCertificateUpload = async (index: number, file: File) => {
+    if (!selectedEmp) return;
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `academic-certs/${selectedEmp.id}-${Date.now()}-${index}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage.from('employee-ids').upload(filePath, file);
+      if (uploadErr) throw uploadErr;
+
+      const { data: certData } = supabase.storage.from('employee-ids').getPublicUrl(filePath);
+
+      const updatedRecords = [...academicRecords];
+      updatedRecords[index].certificate_url = certData.publicUrl;
+      setAcademicRecords(updatedRecords);
+    } catch (err: any) {
+      alert('Failed to upload certificate: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Save / Edit Full Staff Details
   const handleSaveStaffDetails = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,25 +264,11 @@ function EmployeeManagementContent() {
     setUploading(true);
 
     try {
-      let academicCertUrl = editFormData.academic_certificate_url;
-
-      // Upload Academic Certificate if new file provided
-      if (academicFile) {
-        const fileExt = academicFile.name.split('.').pop();
-        const filePath = `academic-certs/${selectedEmp.id}-${Date.now()}.${fileExt}`;
-
-        const { error: uploadErr } = await supabase.storage.from('employee-ids').upload(filePath, academicFile);
-        if (uploadErr) throw uploadErr;
-
-        const { data: certUrlData } = supabase.storage.from('employee-ids').getPublicUrl(filePath);
-        academicCertUrl = certUrlData.publicUrl;
-      }
-
       const { error: dbError } = await supabase
         .from('employees')
         .update({
           ...editFormData,
-          academic_certificate_url: academicCertUrl
+          academic_records: academicRecords
         })
         .eq('id', selectedEmp.id);
 
@@ -241,7 +276,6 @@ function EmployeeManagementContent() {
 
       alert('Employee details updated successfully!');
       setActiveModal(null);
-      setAcademicFile(null);
       fetchEmployees();
     } catch (err: any) {
       alert('Failed to save details: ' + err.message);
@@ -421,6 +455,7 @@ function EmployeeManagementContent() {
                               onClick={() => {
                                 setSelectedEmp(emp);
                                 setEditFormData(emp);
+                                setAcademicRecords(emp.academic_records || []);
                                 setActiveModal('edit_staff');
                               }}
                               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-md border border-slate-700 transition"
@@ -578,27 +613,32 @@ function EmployeeManagementContent() {
               </div>
             </div>
 
-            {/* Academic Details Section */}
+            {/* Multiple Academic Qualifications Display */}
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
-              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">🎓 Academic Background</h3>
-              <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
-                <p><strong>Qualification:</strong> {selectedEmp.academic_level || 'N/A'}</p>
-                <p><strong>School / University:</strong> {selectedEmp.institution_name || 'N/A'}</p>
-                <p><strong>Year of Passing:</strong> {selectedEmp.academic_year || 'N/A'}</p>
-                <p>
-                  <strong>Certificate Attachment:</strong>{' '}
-                  {selectedEmp.academic_certificate_url ? (
-                    <a href={selectedEmp.academic_certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold">
-                      📄 View Certificate
-                    </a>
-                  ) : (
-                    <span className="text-slate-500">Not Uploaded</span>
-                  )}
-                </p>
-              </div>
+              <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">🎓 Academic Qualifications</h3>
+              {selectedEmp.academic_records && selectedEmp.academic_records.length > 0 ? (
+                <div className="space-y-3 divide-y divide-slate-800/80">
+                  {selectedEmp.academic_records.map((rec, i) => (
+                    <div key={rec.id || i} className="pt-2 text-xs text-slate-300 space-y-1">
+                      <p className="font-bold text-white">{rec.academic_level}</p>
+                      <p>Institution: <strong>{rec.institution_name || 'N/A'}</strong></p>
+                      <p>Year of Passing: <strong>{rec.academic_year || 'N/A'}</strong></p>
+                      {rec.certificate_url ? (
+                        <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold block pt-1">
+                          📄 View Certificate Document
+                        </a>
+                      ) : (
+                        <span className="text-slate-500 italic block">No certificate attached</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No academic qualifications recorded.</p>
+              )}
             </div>
 
-            {/* Salary Details Section */}
+            {/* Remuneration & ID Proof Details */}
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3">
               <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider">💰 Remuneration & ID</h3>
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
@@ -622,6 +662,7 @@ function EmployeeManagementContent() {
             <button
               onClick={() => {
                 setEditFormData(selectedEmp);
+                setAcademicRecords(selectedEmp.academic_records || []);
                 setActiveModal('edit_staff');
               }}
               className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm"
@@ -632,9 +673,9 @@ function EmployeeManagementContent() {
         </Modal>
       )}
 
-      {/* --- MODAL 5: EDIT STAFF DETAILS --- */}
+      {/* --- MODAL 5: EDIT STAFF DETAILS (WITH MULTIPLE ACADEMIC RECORDS) --- */}
       {activeModal === 'edit_staff' && selectedEmp && (
-        <Modal title={`Edit Details — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
+        <Modal title={`Edit Profile — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleSaveStaffDetails} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
             
             {/* 1. Personal Info */}
@@ -705,45 +746,103 @@ function EmployeeManagementContent() {
               </div>
             </div>
 
-            {/* 2. Academic Info */}
-            <div className="space-y-3 border-b border-slate-800 pb-4">
-              <p className="font-bold text-emerald-400 text-sm">Academic Details</p>
-              
-              <div>
-                <label className="text-slate-400 font-semibold">Academic Level</label>
-                <select
-                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                  value={editFormData.academic_level || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, academic_level: e.target.value as AcademicLevel })}
+            {/* 2. Multiple Academic Qualifications Section */}
+            <div className="space-y-4 border-b border-slate-800 pb-4">
+              <div className="flex justify-between items-center">
+                <p className="font-bold text-emerald-400 text-sm">Academic Qualifications</p>
+                <button
+                  type="button"
+                  onClick={handleAddAcademicRow}
+                  className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-md text-[11px]"
                 >
-                  <option value="">Select Qualification</option>
-                  <option value="Secondary Education">Secondary Education</option>
-                  <option value="Higher Secondary Education">Higher Secondary Education</option>
-                  <option value="Degree (Graduation)">Degree (Graduation)</option>
-                  <option value="PG (Post-Graduation)">PG (Post-Graduation)</option>
-                </select>
+                  + Add Qualification Level
+                </button>
               </div>
 
-              <div>
-                <label className="text-slate-400 font-semibold">College / University / School Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Calicut University"
-                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                  value={editFormData.institution_name || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, institution_name: e.target.value })}
-                />
-              </div>
+              {academicRecords.length === 0 ? (
+                <p className="text-slate-500 italic">No academic qualifications added yet. Click above to add one.</p>
+              ) : (
+                academicRecords.map((rec, idx) => (
+                  <div key={rec.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-3 relative">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAcademicRow(rec.id)}
+                      className="absolute top-2 right-2 text-rose-500 hover:text-rose-400 font-bold text-xs"
+                    >
+                      ✕ Remove
+                    </button>
 
-              <div>
-                <label className="text-slate-400 font-semibold">Attach Academic Certificate (JPG / PNG / PDF)</label>
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-300"
-                  onChange={(e) => setAcademicFile(e.target.files ? e.target.files[0] : null)}
-                />
-              </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-slate-400 font-semibold">Academic Level</label>
+                        <select
+                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
+                          value={rec.academic_level}
+                          onChange={(e) => {
+                            const updated = [...academicRecords];
+                            updated[idx].academic_level = e.target.value as AcademicLevel;
+                            setAcademicRecords(updated);
+                          }}
+                        >
+                          <option value="Secondary Education">Secondary Education</option>
+                          <option value="Higher Secondary Education">Higher Secondary Education</option>
+                          <option value="Degree (Graduation)">Degree (Graduation)</option>
+                          <option value="PG (Post-Graduation)">PG (Post-Graduation)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 font-semibold">Year of Passing</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 2022"
+                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
+                          value={rec.academic_year}
+                          onChange={(e) => {
+                            const updated = [...academicRecords];
+                            updated[idx].academic_year = e.target.value;
+                            setAcademicRecords(updated);
+                          }}
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="text-slate-400 font-semibold">College / University / School Name</label>
+                        <input
+                          type="text"
+                          placeholder="Full institution name..."
+                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
+                          value={rec.institution_name}
+                          onChange={(e) => {
+                            const updated = [...academicRecords];
+                            updated[idx].institution_name = e.target.value;
+                            setAcademicRecords(updated);
+                          }}
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="text-slate-400 font-semibold">Attach Certificate (PDF / JPG / PNG)</label>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-300"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleCertificateUpload(idx, e.target.files[0]);
+                            }
+                          }}
+                        />
+                        {rec.certificate_url && (
+                          <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 text-[11px] underline block mt-1">
+                            ✓ Certificate Uploaded (Click to View)
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* 3. Salary Info */}
