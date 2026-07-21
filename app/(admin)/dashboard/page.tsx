@@ -12,7 +12,6 @@ interface Project {
   startDate: string;
   completionDate?: string;
   photoUrl?: string;
-  // Private financial details (Only visible on dashboard/admin, NOT public site)
   budget?: string;
 }
 
@@ -90,6 +89,13 @@ export default function AdminDashboard() {
   const runningProjects = projects.filter((p) => p.status === 'running');
   const completedProjects = projects.filter((p) => p.status === 'completed');
 
+  // Dynamic Navigation URL builder helper
+  const getFullPageLink = (tab: 'running' | 'completed' | 'enquiries') => {
+    if (tab === 'running') return '/dashboard/projects/running';
+    if (tab === 'completed') return '/dashboard/projects/completed';
+    return '/dashboard/leads';
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-10 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -133,7 +139,7 @@ export default function AdminDashboard() {
             <div className="mt-6 flex justify-between items-center pt-4 border-t border-slate-800/80">
               <span className="text-xs text-[#0087A1] font-semibold">Click to preview</span>
               <Link
-                href="/dashboard/projects?status=running"
+                href="/dashboard/projects/running"
                 className="text-xs font-bold bg-[#0087A1]/20 text-[#0087A1] hover:bg-[#0087A1] hover:text-white px-3 py-1.5 rounded-md transition"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -162,7 +168,7 @@ export default function AdminDashboard() {
             <div className="mt-6 flex justify-between items-center pt-4 border-t border-slate-800/80">
               <span className="text-xs text-[#F26522] font-semibold">Click to preview</span>
               <Link
-                href="/dashboard/projects?status=completed"
+                href="/dashboard/projects/completed"
                 className="text-xs font-bold bg-[#F26522]/20 text-[#F26522] hover:bg-[#F26522] hover:text-white px-3 py-1.5 rounded-md transition"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -171,7 +177,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Card 3: Total Enquiries (Spelling Corrected) */}
+          {/* Card 3: Total Enquiries */}
           <div
             onClick={() => setActiveTab('enquiries')}
             className={`p-6 rounded-2xl border cursor-pointer transition transform hover:-translate-y-1 shadow-lg relative ${
@@ -191,7 +197,7 @@ export default function AdminDashboard() {
             <div className="mt-6 flex justify-between items-center pt-4 border-t border-slate-800/80">
               <span className="text-xs text-[#7D299E] font-semibold">Click to preview</span>
               <Link
-                href="/dashboard/enquiries"
+                href="/dashboard/leads"
                 className="text-xs font-bold bg-[#7D299E]/20 text-[#7D299E] hover:bg-[#7D299E] hover:text-white px-3 py-1.5 rounded-md transition"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -215,7 +221,7 @@ export default function AdminDashboard() {
 
             {/* Direct Navigation Button */}
             <Link
-              href={activeTab === 'enquiries' ? '/dashboard/enquiries' : `/dashboard/projects?status=${activeTab}`}
+              href={getFullPageLink(activeTab)}
               className="text-xs font-extrabold uppercase tracking-wider text-[#0087A1] hover:underline flex items-center gap-1"
             >
               Open Full Page Mode →
