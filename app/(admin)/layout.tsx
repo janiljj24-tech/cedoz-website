@@ -115,6 +115,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link href="/dashboard/employees?filter=onboarding" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   📑 Onboarding 
                 </Link>
+                <Link href="/dashboard/employees?filter=staff" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  👨‍💼 Staff Members
+                </Link>
               </div>
             )}
           </div>
