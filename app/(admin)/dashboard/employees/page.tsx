@@ -217,7 +217,7 @@ export default function EmployeeManagementPage() {
         <div>
           <h1 className="text-3xl font-extrabold text-white">Employee Lifecycle Management</h1>
           <p className="text-sm text-slate-400 mt-1">
-            Evaluate candidate interviews, generate/view offer letters, and handle onboarding.
+            Evaluate candidate interviews, generate/view offer letters with official branding, and handle onboarding.
           </p>
         </div>
         <button
@@ -463,19 +463,28 @@ export default function EmployeeManagementPage() {
         </Modal>
       )}
 
-      {/* --- MODAL 3: VIEW & DOWNLOAD OFFER LETTER --- */}
+      {/* --- MODAL 3: VIEW & DOWNLOAD OFFER LETTER (WITH LOGO) --- */}
       {activeModal === 'view_offer' && selectedEmp && (
         <Modal title="Official Offer Letter Preview" onClose={() => setActiveModal(null)}>
           <div className="space-y-6">
             
             {/* Printable Letter Container */}
             <div id="printable-offer-letter" className="bg-white text-slate-900 p-6 rounded-xl border border-slate-200 shadow-inner text-sm space-y-4">
+              
+              {/* Header with CEDOZ Logo */}
               <div className="border-b border-slate-200 pb-4 flex justify-between items-center">
                 <div>
-                  <h2 className="text-2xl font-extrabold text-[#0C1B4B]">CEDOZ</h2>
-                  <p className="text-xs text-slate-500">Community Empowerment & Development Organization</p>
+                  <img 
+                    src="/logo.png" 
+                    alt="CEDOZ Official Logo" 
+                    className="h-12 w-auto object-contain mb-1" 
+                  />
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                    Community Empowerment & Development Organization
+                  </p>
                 </div>
                 <div className="text-right text-xs text-slate-500">
+                  <p className="font-bold text-slate-800">OFFICIAL OFFER LETTER</p>
                   <p>Date: {new Date().toLocaleDateString()}</p>
                   <p>Ref: OFF-{selectedEmp.id.slice(0, 6).toUpperCase()}</p>
                 </div>
@@ -490,7 +499,7 @@ export default function EmployeeManagementPage() {
               <p className="text-slate-700 leading-relaxed text-xs">
                 Dear <strong>{selectedEmp.name}</strong>,<br /><br />
                 We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at <strong>CEDOZ</strong>. 
-                Following your interview, we are confident that your skills will contribute significantly to our mission.
+                Following your interview process, we are confident that your skills and expertise will contribute significantly to our organizational goals.
               </p>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1">
@@ -503,12 +512,12 @@ export default function EmployeeManagementPage() {
               </div>
 
               <p className="text-slate-600 text-xs">
-                Please review the terms and confirm your acceptance. Welcome to the team!
+                Please review the terms and confirm your acceptance. Welcome to the CEDOZ team!
               </p>
 
               <div className="pt-6 flex justify-between items-end border-t border-slate-200">
                 <div>
-                  <p className="font-bold text-xs">Authorized Signature</p>
+                  <p className="font-bold text-xs text-slate-800">Authorized Signature</p>
                   <p className="text-xs text-slate-500">HR & Operations Dept.</p>
                 </div>
                 <div className="text-right">
