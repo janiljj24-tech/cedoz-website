@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
+// Recommendation: Move client creation to a dedicated lib file (e.g., utils/supabase/client.ts)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -12,10 +13,22 @@ const supabase = createClient(
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
   const [isEmployeeMenuOpen, setIsEmployeeMenuOpen] = useState(false);
-  const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(true); // Open finance by default
+  const [isFinanceMenuOpen, setIsFinanceMenuOpen] = useState(true);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
+  // Helper to dynamically check active links
+  const isActiveLink = (path: string, paramKey?: string, paramVal?: string) => {
+    if (pathname !== path) return false;
+    if (paramKey && paramVal) {
+      return searchParams.get(paramKey) === paramVal;
+    }
+    return true;
+  };
 
   const handleLogout = async () => {
     try {
@@ -26,6 +39,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const toggleMenu = (setter: React.Dispatch<React.SetStateAction<boolean>>, currentVal: boolean) => {
+    if (!isSidebarHovered) {
+      setIsSidebarHovered(true);
+      setter(true);
+    } else {
+      setter(!currentVal);
     }
   };
 
@@ -65,7 +87,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
           
           {/* Dashboard */}
-          <Link href="/dashboard" style={{ color: '#ffffff', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', backgroundColor: '#1e293b', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link 
+            href="/dashboard" 
+            style={{ 
+              color: '#ffffff', 
+              textDecoration: 'none', 
+              padding: '0.75rem 1rem', 
+              borderRadius: '6px', 
+              backgroundColor: isActiveLink('/dashboard') ? '#1e293b' : 'transparent', 
+              fontWeight: 500, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem' 
+            }}
+          >
             <span style={{ display: 'inline-grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2px', width: '16px', height: '16px', flexShrink: 0 }}>
               <span style={{ backgroundColor: 'currentColor', borderRadius: '1px' }}></span>
               <span style={{ backgroundColor: 'currentColor', borderRadius: '1px' }}></span>
@@ -78,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Finance Collapsible Parent */}
           <div>
             <div 
-              onClick={() => setIsFinanceMenuOpen(!isFinanceMenuOpen)}
+              onClick={() => toggleMenu(setIsFinanceMenuOpen, isFinanceMenuOpen)}
               style={{ color: '#94a3b8', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: isSidebarHovered ? 'space-between' : 'center', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -91,13 +126,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Finance Submenu Group */}
             {isFinanceMenuOpen && isSidebarHovered && (
               <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                <Link href="/dashboard/finance?tab=project" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/finance?tab=project" style={{ color: isActiveLink('/dashboard/finance', 'tab', 'project') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   📊 Project Finance
                 </Link>
-                <Link href="/dashboard/finance?tab=office" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/finance?tab=office" style={{ color: isActiveLink('/dashboard/finance', 'tab', 'office') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   🏢 Office Expenses
                 </Link>
-                <Link href="/dashboard/finance?tab=other" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/finance?tab=other" style={{ color: isActiveLink('/dashboard/finance', 'tab', 'other') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   💸 Other Expenses
                 </Link>
               </div>
@@ -107,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Employee Management Collapsible Parent */}
           <div>
             <div 
-              onClick={() => setIsEmployeeMenuOpen(!isEmployeeMenuOpen)}
+              onClick={() => toggleMenu(setIsEmployeeMenuOpen, isEmployeeMenuOpen)}
               style={{ color: '#94a3b8', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: isSidebarHovered ? 'space-between' : 'center', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -120,19 +155,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Employee Submenu Group */}
             {isEmployeeMenuOpen && isSidebarHovered && (
               <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                <Link href="/dashboard/employees?filter=new" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/employees?filter=new" style={{ color: isActiveLink('/dashboard/employees', 'filter', 'new') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   👥 Candidate List
                 </Link>
-                <Link href="/dashboard/employees?filter=interviewing" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/employees?filter=interviewing" style={{ color: isActiveLink('/dashboard/employees', 'filter', 'interviewing') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   📝 Interviews
                 </Link>
-                <Link href="/dashboard/employees?filter=offers" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/employees?filter=offers" style={{ color: isActiveLink('/dashboard/employees', 'filter', 'offers') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   ✉️ Offer Letters
                 </Link>
-                <Link href="/dashboard/employees?filter=onboarding" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/employees?filter=onboarding" style={{ color: isActiveLink('/dashboard/employees', 'filter', 'onboarding') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   📑 Onboarding
                 </Link>
-                <Link href="/dashboard/employees?filter=staff" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/employees?filter=staff" style={{ color: isActiveLink('/dashboard/employees', 'filter', 'staff') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   🏢 Staff Members
                 </Link>
               </div>
@@ -142,7 +177,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Projects Collapsible Parent */}
           <div>
             <div 
-              onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
+              onClick={() => toggleMenu(setIsProjectMenuOpen, isProjectMenuOpen)}
               style={{ color: '#94a3b8', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: isSidebarHovered ? 'space-between' : 'center', cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -155,19 +190,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Submenu Group */}
             {isProjectMenuOpen && isSidebarHovered && (
               <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                <Link href="/dashboard/tenders" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/tenders" style={{ color: isActiveLink('/dashboard/tenders') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   📑 Tenders & Conversion
                 </Link>
-                <Link href="/dashboard/projects/create" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/projects/create" style={{ color: isActiveLink('/dashboard/projects/create') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   + Create Project
                 </Link>
-                <Link href="/dashboard/projects/running" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/projects/running" style={{ color: isActiveLink('/dashboard/projects/running') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   ⏳ Running Projects
                 </Link>
-                <Link href="/dashboard/projects/completed" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/projects/completed" style={{ color: isActiveLink('/dashboard/projects/completed') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   ✅ Completed Projects
                 </Link>
-                <Link href="/dashboard/leads" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/leads" style={{ color: isActiveLink('/dashboard/leads') ? '#38bdf8' : '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   📥 Enquiries
                 </Link>
               </div>
