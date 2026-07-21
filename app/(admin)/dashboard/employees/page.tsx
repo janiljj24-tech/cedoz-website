@@ -1,10 +1,12 @@
 'use client';
 
+// Force Next.js to render this route dynamically on requests (fixes useSearchParams static build error)
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
-// Helper function to lazily initialize Supabase client
 const getSupabaseClient = () => {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,24 +44,16 @@ interface Employee {
   phone: string;
   position: string;
   status: EmployeeStatus;
-  
-  // Remuneration Details
   offered_salary?: string;
   basic_pay?: string;
   allowances?: string;
-
-  // Onboarding & Personal Details
   joining_date?: string;
   address?: string;
   dob?: string;
   gender?: string;
   emergency_contact?: string;
   blood_group?: string;
-
-  // Array of Academic Qualifications
   academic_records?: AcademicRecord[];
-
-  // Identification Proof Document
   id_proof_url?: string;
 }
 
@@ -71,26 +65,20 @@ function EmployeeManagementContent() {
   const [loading, setLoading] = useState(true);
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
 
-  // Modal Controls
   const [activeModal, setActiveModal] = useState<'offer' | 'view_offer' | 'onboard' | 'add' | 'view_staff' | 'edit_staff' | null>(null);
 
-  // Form States
   const [salaryInput, setSalaryInput] = useState('');
   const [joiningDateInput, setJoiningDateInput] = useState('');
   const [addressInput, setAddressInput] = useState('');
   const [idFile, setIdFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Staff Editing / Profile State
   const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
   const [academicRecords, setAcademicRecords] = useState<AcademicRecord[]>([]);
-
-  // New Candidate Form State
   const [newCandidate, setNewCandidate] = useState({ name: '', email: '', phone: '', position: '' });
 
   const supabase = getSupabaseClient();
 
-  // Fetch Employees from Supabase
   const fetchEmployees = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -107,23 +95,12 @@ function EmployeeManagementContent() {
     fetchEmployees();
   }, []);
 
-  // Filter employees based on active submenu
   const filteredEmployees = employees.filter((emp) => {
-    if (filter === 'new' || !filter) {
-      return emp.status === 'interviewing';
-    }
-    if (filter === 'interviewing') {
-      return ['interviewing', 'interview_passed', 'interview_failed'].includes(emp.status);
-    }
-    if (filter === 'offers') {
-      return ['offer_sent', 'offer_accepted', 'offer_rejected'].includes(emp.status);
-    }
-    if (filter === 'onboarding') {
-      return ['offer_accepted'].includes(emp.status);
-    }
-    if (filter === 'staff') {
-      return emp.status === 'onboarded';
-    }
+    if (filter === 'new' || !filter) return emp.status === 'interviewing';
+    if (filter === 'interviewing') return ['interviewing', 'interview_passed', 'interview_failed'].includes(emp.status);
+    if (filter === 'offers') return ['offer_sent', 'offer_accepted', 'offer_rejected'].includes(emp.status);
+    if (filter === 'onboarding') return ['offer_accepted'].includes(emp.status);
+    if (filter === 'staff') return emp.status === 'onboarded';
     return true;
   });
 
@@ -139,9 +116,8 @@ function EmployeeManagementContent() {
   const handleAddCandidate = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('employees').insert([{ ...newCandidate, status: 'interviewing' }]);
-    if (error) {
-      alert('Failed to add candidate: ' + error.message);
-    } else {
+    if (error) alert('Failed to add candidate: ' + error.message);
+    else {
       setNewCandidate({ name: '', email: '', phone: '', position: '' });
       setActiveModal(null);
       fetchEmployees();
@@ -288,8 +264,6 @@ function EmployeeManagementContent() {
 
   return (
     <div className="space-y-8 font-sans">
-      
-      {/* Printable Area Styling */}
       <style jsx global>{`
         @media print {
           body * { visibility: hidden; }
@@ -299,7 +273,7 @@ function EmployeeManagementContent() {
         }
       `}</style>
 
-      {/* Dynamic Header */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-white">{getPageTitle()}</h1>
@@ -319,7 +293,7 @@ function EmployeeManagementContent() {
         </button>
       </div>
 
-      {/* Employee Table */}
+      {/* Table */}
       <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <h2 className="text-lg font-bold text-white">
@@ -355,113 +329,42 @@ function EmployeeManagementContent() {
                         <p className="font-bold text-white">{emp.name}</p>
                         <p className="text-xs text-slate-400">{emp.position}</p>
                       </td>
-
                       <td className="p-4 text-xs text-slate-300">
                         <p>{emp.email}</p>
                         <p className="text-slate-400">{emp.phone}</p>
                       </td>
-
                       <td className="p-4 font-semibold text-slate-200">
                         {emp.offered_salary || <span className="text-xs text-slate-500">Not Set</span>}
                       </td>
-
                       <td className="p-4">
                         <StatusBadge status={emp.status} />
                       </td>
-
                       <td className="p-4 text-right space-x-2">
                         {emp.status === 'interviewing' && (
                           <>
-                            <button
-                              onClick={() => handleInterviewResult(emp.id, 'passed')}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md transition"
-                            >
-                              ✓ Pass
-                            </button>
-                            <button
-                              onClick={() => handleInterviewResult(emp.id, 'failed')}
-                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-md transition"
-                            >
-                              ✕ Fail
-                            </button>
+                            <button onClick={() => handleInterviewResult(emp.id, 'passed')} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md transition">✓ Pass</button>
+                            <button onClick={() => handleInterviewResult(emp.id, 'failed')} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-md transition">✕ Fail</button>
                           </>
                         )}
-
                         {emp.status === 'interview_passed' && (
-                          <button
-                            onClick={() => {
-                              setSelectedEmp(emp);
-                              setActiveModal('offer');
-                            }}
-                            className="px-3 py-1.5 bg-[#F26522] hover:bg-[#d95516] text-white text-xs font-bold rounded-md transition"
-                          >
-                            Create Offer Letter
-                          </button>
+                          <button onClick={() => { setSelectedEmp(emp); setActiveModal('offer'); }} className="px-3 py-1.5 bg-[#F26522] hover:bg-[#d95516] text-white text-xs font-bold rounded-md transition">Create Offer Letter</button>
                         )}
-
                         {['offer_sent', 'offer_accepted', 'onboarded'].includes(emp.status) && (
-                          <button
-                            onClick={() => {
-                              setSelectedEmp(emp);
-                              setActiveModal('view_offer');
-                            }}
-                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-md border border-slate-700 transition"
-                          >
-                            👁 Offer Letter
-                          </button>
+                          <button onClick={() => { setSelectedEmp(emp); setActiveModal('view_offer'); }} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-md border border-slate-700 transition">👁 Offer Letter</button>
                         )}
-
                         {emp.status === 'offer_sent' && (
                           <>
-                            <button
-                              onClick={() => handleUpdateOfferStatus(emp.id, 'offer_accepted')}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md transition"
-                            >
-                              Mark Accepted
-                            </button>
-                            <button
-                              onClick={() => handleUpdateOfferStatus(emp.id, 'offer_rejected')}
-                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-md transition"
-                            >
-                              Mark Declined
-                            </button>
+                            <button onClick={() => handleUpdateOfferStatus(emp.id, 'offer_accepted')} className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-md transition">Mark Accepted</button>
+                            <button onClick={() => handleUpdateOfferStatus(emp.id, 'offer_rejected')} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-md transition">Mark Declined</button>
                           </>
                         )}
-
                         {emp.status === 'offer_accepted' && (
-                          <button
-                            onClick={() => {
-                              setSelectedEmp(emp);
-                              setActiveModal('onboard');
-                            }}
-                            className="px-3 py-1.5 bg-[#7D299E] hover:bg-[#682084] text-white text-xs font-bold rounded-md transition"
-                          >
-                            Complete Onboarding
-                          </button>
+                          <button onClick={() => { setSelectedEmp(emp); setActiveModal('onboard'); }} className="px-3 py-1.5 bg-[#7D299E] hover:bg-[#682084] text-white text-xs font-bold rounded-md transition">Complete Onboarding</button>
                         )}
-
                         {emp.status === 'onboarded' && (
                           <>
-                            <button
-                              onClick={() => {
-                                setSelectedEmp(emp);
-                                setActiveModal('view_staff');
-                              }}
-                              className="px-3 py-1.5 bg-[#0087A1] hover:bg-[#00738a] text-white text-xs font-bold rounded-md transition"
-                            >
-                              👁 View Profile
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedEmp(emp);
-                                setEditFormData(emp);
-                                setAcademicRecords(emp.academic_records || []);
-                                setActiveModal('edit_staff');
-                              }}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-md border border-slate-700 transition"
-                            >
-                              ✏ Edit Details
-                            </button>
+                            <button onClick={() => { setSelectedEmp(emp); setActiveModal('view_staff'); }} className="px-3 py-1.5 bg-[#0087A1] hover:bg-[#00738a] text-white text-xs font-bold rounded-md transition">👁 View Profile</button>
+                            <button onClick={() => { setSelectedEmp(emp); setEditFormData(emp); setAcademicRecords(emp.academic_records || []); setActiveModal('edit_staff'); }} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-md border border-slate-700 transition">✏ Edit Details</button>
                           </>
                         )}
                       </td>
@@ -474,80 +377,43 @@ function EmployeeManagementContent() {
         </div>
       </div>
 
-      {/* --- MODAL 1: ADD CANDIDATE --- */}
+      {/* MODALS */}
       {activeModal === 'add' && (
         <Modal title="Add Candidate" onClose={() => setActiveModal(null)}>
           <form onSubmit={handleAddCandidate} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-400">Full Name</label>
-              <input
-                type="text"
-                required
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={newCandidate.name}
-                onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
-              />
+              <input type="text" required className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={newCandidate.name} onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-400">Email Address</label>
-              <input
-                type="email"
-                required
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={newCandidate.email}
-                onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
-              />
+              <input type="email" required className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={newCandidate.email} onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-400">Phone Number</label>
-              <input
-                type="text"
-                required
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={newCandidate.phone}
-                onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
-              />
+              <input type="text" required className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={newCandidate.phone} onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-400">Job Position</label>
-              <input
-                type="text"
-                required
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={newCandidate.position}
-                onChange={(e) => setNewCandidate({ ...newCandidate, position: e.target.value })}
-              />
+              <input type="text" required className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={newCandidate.position} onChange={(e) => setNewCandidate({ ...newCandidate, position: e.target.value })} />
             </div>
-            <button type="submit" className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm">
-              Save Candidate
-            </button>
+            <button type="submit" className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm">Save Candidate</button>
           </form>
         </Modal>
       )}
 
-      {/* --- MODAL 2: CREATE OFFER LETTER --- */}
       {activeModal === 'offer' && selectedEmp && (
         <Modal title={`Create Offer Letter for ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleSendOffer} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-400">Offered Salary</label>
-              <input
-                type="text"
-                required
-                placeholder="₹8,00,000 per annum"
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={salaryInput}
-                onChange={(e) => setSalaryInput(e.target.value)}
-              />
+              <input type="text" required placeholder="₹8,00,000 per annum" className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={salaryInput} onChange={(e) => setSalaryInput(e.target.value)} />
             </div>
-            <button type="submit" className="w-full py-3 bg-[#F26522] font-bold text-white rounded-lg transition text-sm">
-              Issue Offer Letter
-            </button>
+            <button type="submit" className="w-full py-3 bg-[#F26522] font-bold text-white rounded-lg transition text-sm">Issue Offer Letter</button>
           </form>
         </Modal>
       )}
 
-      {/* --- MODAL 3: VIEW / PRINT OFFER LETTER --- */}
       {activeModal === 'view_offer' && selectedEmp && (
         <Modal title={`Offer Letter Preview — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <div className="space-y-4">
@@ -558,76 +424,40 @@ function EmployeeManagementContent() {
               </div>
               <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
               <p><strong>To:</strong> {selectedEmp.name} ({selectedEmp.email})</p>
-              <p className="leading-relaxed">
-                We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at CEDOZ. 
-                Your starting salary for this position will be <strong>{selectedEmp.offered_salary || 'As Agreed'}</strong>.
-              </p>
-              <p className="leading-relaxed">
-                Please confirm your acceptance of this offer letter at your earliest convenience.
-              </p>
+              <p className="leading-relaxed">We are pleased to offer you the position of <strong>{selectedEmp.position}</strong> at CEDOZ. Your starting salary for this position will be <strong>{selectedEmp.offered_salary || 'As Agreed'}</strong>.</p>
+              <p className="leading-relaxed">Please confirm your acceptance of this offer letter at your earliest convenience.</p>
               <div className="pt-6 border-t border-slate-800 flex justify-between text-slate-400">
                 <p>HR Department</p>
                 <p>CEDOZ Management</p>
               </div>
             </div>
-            
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="w-full py-2.5 bg-[#F26522] hover:bg-[#d95516] font-bold text-white rounded-lg transition text-sm no-print"
-            >
-              🖨 Print / Download PDF
-            </button>
+            <button type="button" onClick={() => window.print()} className="w-full py-2.5 bg-[#F26522] hover:bg-[#d95516] font-bold text-white rounded-lg transition text-sm no-print">🖨 Print / Download PDF</button>
           </div>
         </Modal>
       )}
 
-      {/* --- MODAL 4: ONBOARDING --- */}
       {activeModal === 'onboard' && selectedEmp && (
         <Modal title={`Complete Onboarding — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleOnboardSubmit} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-400">Date of Joining</label>
-              <input
-                type="date"
-                required
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={joiningDateInput}
-                onChange={(e) => setJoiningDateInput(e.target.value)}
-              />
+              <input type="date" required className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={joiningDateInput} onChange={(e) => setJoiningDateInput(e.target.value)} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-400">Residential Address</label>
-              <textarea
-                required
-                rows={3}
-                className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-              />
+              <textarea required rows={3} className="w-full mt-1 p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" value={addressInput} onChange={(e) => setAddressInput(e.target.value)} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-400">Upload ID Proof (JPG / PNG / PDF)</label>
-              <input
-                type="file"
-                required
-                accept=".jpg,.jpeg,.png,.pdf"
-                className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-300 text-xs"
-                onChange={(e) => setIdFile(e.target.files ? e.target.files[0] : null)}
-              />
+              <input type="file" required accept=".jpg,.jpeg,.png,.pdf" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-300 text-xs" onChange={(e) => setIdFile(e.target.files ? e.target.files[0] : null)} />
             </div>
-            <button
-              type="submit"
-              disabled={uploading}
-              className="w-full py-3 bg-[#7D299E] font-bold text-white rounded-lg transition text-sm"
-            >
+            <button type="submit" disabled={uploading} className="w-full py-3 bg-[#7D299E] font-bold text-white rounded-lg transition text-sm">
               {uploading ? 'Uploading & Saving...' : 'Complete Onboarding'}
             </button>
           </form>
         </Modal>
       )}
 
-      {/* --- MODAL 5: VIEW FULL STAFF PROFILE --- */}
       {activeModal === 'view_staff' && selectedEmp && (
         <Modal title={`Staff Profile — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1">
@@ -656,9 +486,7 @@ function EmployeeManagementContent() {
                       <p>Institution: <strong>{rec.institution_name || 'N/A'}</strong></p>
                       <p>Year of Passing: <strong>{rec.academic_year || 'N/A'}</strong></p>
                       {rec.certificate_url ? (
-                        <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold block pt-1">
-                          📄 View Certificate Document
-                        </a>
+                        <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold block pt-1">📄 View Certificate Document</a>
                       ) : (
                         <span className="text-slate-500 italic block">No certificate attached</span>
                       )}
@@ -680,9 +508,7 @@ function EmployeeManagementContent() {
                 <p className="col-span-2">
                   <strong>Uploaded ID Proof:</strong>{' '}
                   {selectedEmp.id_proof_url ? (
-                    <a href={selectedEmp.id_proof_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold">
-                      📄 View ID Document
-                    </a>
+                    <a href={selectedEmp.id_proof_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline font-bold">📄 View ID Document</a>
                   ) : (
                     <span className="text-slate-500">Not Uploaded</span>
                   )}
@@ -690,21 +516,13 @@ function EmployeeManagementContent() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setEditFormData(selectedEmp);
-                setAcademicRecords(selectedEmp.academic_records || []);
-                setActiveModal('edit_staff');
-              }}
-              className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm"
-            >
+            <button onClick={() => { setEditFormData(selectedEmp); setAcademicRecords(selectedEmp.academic_records || []); setActiveModal('edit_staff'); }} className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm">
               ✏ Edit Employee Profile
             </button>
           </div>
         </Modal>
       )}
 
-      {/* --- MODAL 6: EDIT STAFF DETAILS --- */}
       {activeModal === 'edit_staff' && selectedEmp && (
         <Modal title={`Edit Profile — ${selectedEmp.name}`} onClose={() => setActiveModal(null)}>
           <form onSubmit={handleSaveStaffDetails} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs">
@@ -713,40 +531,19 @@ function EmployeeManagementContent() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-400 font-semibold">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  />
+                  <input type="text" required className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Designation / Role</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.position || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
-                  />
+                  <input type="text" required className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.position || ''} onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.dob || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, dob: e.target.value })}
-                  />
+                  <input type="date" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.dob || ''} onChange={(e) => setEditFormData({ ...editFormData, dob: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Gender</label>
-                  <select
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.gender || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}
-                  >
+                  <select className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.gender || ''} onChange={(e) => setEditFormData({ ...editFormData, gender: e.target.value })}>
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -755,22 +552,11 @@ function EmployeeManagementContent() {
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Blood Group</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. O+ve"
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.blood_group || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, blood_group: e.target.value })}
-                  />
+                  <input type="text" placeholder="e.g. O+ve" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.blood_group || ''} onChange={(e) => setEditFormData({ ...editFormData, blood_group: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Emergency Contact</label>
-                  <input
-                    type="text"
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.emergency_contact || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, emergency_contact: e.target.value })}
-                  />
+                  <input type="text" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.emergency_contact || ''} onChange={(e) => setEditFormData({ ...editFormData, emergency_contact: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -778,93 +564,38 @@ function EmployeeManagementContent() {
             <div className="space-y-4 border-b border-slate-800 pb-4">
               <div className="flex justify-between items-center">
                 <p className="font-bold text-emerald-400 text-sm">Academic Qualifications</p>
-                <button
-                  type="button"
-                  onClick={handleAddAcademicRow}
-                  className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-md text-[11px]"
-                >
-                  + Add Qualification Level
-                </button>
+                <button type="button" onClick={handleAddAcademicRow} className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-md text-[11px]">+ Add Qualification Level</button>
               </div>
 
               {academicRecords.length === 0 ? (
-                <p className="text-slate-500 italic">No academic qualifications added yet. Click above to add one.</p>
+                <p className="text-slate-500 italic">No academic qualifications added yet.</p>
               ) : (
                 academicRecords.map((rec, idx) => (
                   <div key={rec.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-3 relative">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAcademicRow(rec.id)}
-                      className="absolute top-2 right-2 text-rose-500 hover:text-rose-400 font-bold text-xs"
-                    >
-                      ✕ Remove
-                    </button>
-
+                    <button type="button" onClick={() => handleRemoveAcademicRow(rec.id)} className="absolute top-2 right-2 text-rose-500 hover:text-rose-400 font-bold text-xs">✕ Remove</button>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-slate-400 font-semibold">Academic Level</label>
-                        <select
-                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
-                          value={rec.academic_level}
-                          onChange={(e) => {
-                            const updated = [...academicRecords];
-                            updated[idx].academic_level = e.target.value as AcademicLevel;
-                            setAcademicRecords(updated);
-                          }}
-                        >
+                        <select className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white" value={rec.academic_level} onChange={(e) => { const updated = [...academicRecords]; updated[idx].academic_level = e.target.value as AcademicLevel; setAcademicRecords(updated); }}>
                           <option value="Secondary Education">Secondary Education</option>
                           <option value="Higher Secondary Education">Higher Secondary Education</option>
                           <option value="Degree (Graduation)">Degree (Graduation)</option>
                           <option value="PG (Post-Graduation)">PG (Post-Graduation)</option>
                         </select>
                       </div>
-
                       <div>
                         <label className="text-slate-400 font-semibold">Year of Passing</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 2022"
-                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
-                          value={rec.academic_year}
-                          onChange={(e) => {
-                            const updated = [...academicRecords];
-                            updated[idx].academic_year = e.target.value;
-                            setAcademicRecords(updated);
-                          }}
-                        />
+                        <input type="text" placeholder="e.g. 2022" className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white" value={rec.academic_year} onChange={(e) => { const updated = [...academicRecords]; updated[idx].academic_year = e.target.value; setAcademicRecords(updated); }} />
                       </div>
-
                       <div className="col-span-2">
                         <label className="text-slate-400 font-semibold">College / University / School Name</label>
-                        <input
-                          type="text"
-                          placeholder="Full institution name..."
-                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white"
-                          value={rec.institution_name}
-                          onChange={(e) => {
-                            const updated = [...academicRecords];
-                            updated[idx].institution_name = e.target.value;
-                            setAcademicRecords(updated);
-                          }}
-                        />
+                        <input type="text" placeholder="Full institution name..." className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-white" value={rec.institution_name} onChange={(e) => { const updated = [...academicRecords]; updated[idx].institution_name = e.target.value; setAcademicRecords(updated); }} />
                       </div>
-
                       <div className="col-span-2">
                         <label className="text-slate-400 font-semibold">Attach Certificate (PDF / JPG / PNG)</label>
-                        <input
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.pdf"
-                          className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-300"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              handleCertificateUpload(idx, e.target.files[0]);
-                            }
-                          }}
-                        />
+                        <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="w-full mt-1 p-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-300" onChange={(e) => { if (e.target.files && e.target.files[0]) handleCertificateUpload(idx, e.target.files[0]); }} />
                         {rec.certificate_url && (
-                          <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 text-[11px] underline block mt-1">
-                            ✓ Certificate Uploaded (Click to View)
-                          </a>
+                          <a href={rec.certificate_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 text-[11px] underline block mt-1">✓ Certificate Uploaded (Click to View)</a>
                         )}
                       </div>
                     </div>
@@ -878,37 +609,21 @@ function EmployeeManagementContent() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-slate-400 font-semibold">Total CTC / Offered Salary</label>
-                  <input
-                    type="text"
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.offered_salary || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, offered_salary: e.target.value })}
-                  />
+                  <input type="text" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.offered_salary || ''} onChange={(e) => setEditFormData({ ...editFormData, offered_salary: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold">Basic Pay</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. ₹25,000 / month"
-                    className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    value={editFormData.basic_pay || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, basic_pay: e.target.value })}
-                  />
+                  <input type="text" placeholder="e.g. ₹25,000 / month" className="w-full mt-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-white" value={editFormData.basic_pay || ''} onChange={(e) => setEditFormData({ ...editFormData, basic_pay: e.target.value })} />
                 </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={uploading}
-              className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm disabled:opacity-50"
-            >
+            <button type="submit" disabled={uploading} className="w-full py-3 bg-[#0087A1] font-bold text-white rounded-lg transition text-sm disabled:opacity-50">
               {uploading ? 'Saving Changes...' : 'Save Profile Changes'}
             </button>
           </form>
         </Modal>
       )}
-
     </div>
   );
 }
