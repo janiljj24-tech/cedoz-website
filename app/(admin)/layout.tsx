@@ -103,8 +103,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Employee Submenu Group */}
             {isEmployeeMenuOpen && isSidebarHovered && (
               <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                <Link href="/dashboard/employees" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                  👥 All Pipeline
+                <Link href="/dashboard/employees?filter=new" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                  👥 Candidate List
                 </Link>
                 <Link href="/dashboard/employees?filter=interviewing" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
                   📝 Interviews

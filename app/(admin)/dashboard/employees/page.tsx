@@ -62,7 +62,7 @@ interface Employee {
 
 function EmployeeManagementContent() {
   const searchParams = useSearchParams();
-  const filter = searchParams.get('filter'); // 'interviewing', 'offers', 'onboarding', 'staff'
+  const filter = searchParams.get('filter'); // 'new', 'interviewing', 'offers', 'onboarding', 'staff'
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +106,10 @@ function EmployeeManagementContent() {
 
   // Filter employees based on active submenu
   const filteredEmployees = employees.filter((emp) => {
+    if (filter === 'new' || !filter) {
+      // Show ONLY new candidates scheduled for interview
+      return emp.status === 'interviewing';
+    }
     if (filter === 'interviewing') {
       return ['interviewing', 'interview_passed', 'interview_failed'].includes(emp.status);
     }
@@ -118,15 +122,16 @@ function EmployeeManagementContent() {
     if (filter === 'staff') {
       return emp.status === 'onboarded';
     }
-    return true; // Default: show all pipeline
+    return true;
   });
 
   const getPageTitle = () => {
+    if (filter === 'new' || !filter) return 'Candidate List';
     if (filter === 'interviewing') return 'Interviews & Assessments';
     if (filter === 'offers') return 'Offer Letters';
     if (filter === 'onboarding') return 'Onboarding';
     if (filter === 'staff') return 'Staff Directory & Profiles';
-    return 'Employee Lifecycle Management';
+    return 'Employee Management';
   };
 
   // Add Candidate
@@ -302,11 +307,11 @@ function EmployeeManagementContent() {
         <div>
           <h1 className="text-3xl font-extrabold text-white">{getPageTitle()}</h1>
           <p className="text-sm text-slate-400 mt-1">
+            {(filter === 'new' || !filter) && 'View and manage newly added job applicants.'}
             {filter === 'interviewing' && 'Track candidates currently in assessment or interview stage.'}
             {filter === 'offers' && 'Manage issued offer letters, track acceptances, and preview official documentation.'}
             {filter === 'onboarding' && 'Candidates who accepted offers and require onboarding document collection.'}
             {filter === 'staff' && 'Directory of active onboarded staff with personal, academic, and salary profiles.'}
-            {!filter && 'Full candidate and employee lifecycle management pipeline.'}
           </p>
         </div>
         <button
@@ -321,7 +326,7 @@ function EmployeeManagementContent() {
       <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <h2 className="text-lg font-bold text-white">
-            {filter ? `${getPageTitle()} (${filteredEmployees.length})` : `All Records (${filteredEmployees.length})`}
+            {`${getPageTitle()} (${filteredEmployees.length})`}
           </h2>
         </div>
 
@@ -343,7 +348,7 @@ function EmployeeManagementContent() {
                 {filteredEmployees.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-500">
-                      No staff or candidate records found in this view.
+                      No candidate records found in this view.
                     </td>
                   </tr>
                 ) : (
