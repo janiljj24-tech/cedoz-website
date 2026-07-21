@@ -19,7 +19,6 @@ interface Project {
   lead_name?: string;
   created_at?: string;
   final_project_amount?: number;
-  photoUrl?: string;
 }
 
 interface Inquiry {
@@ -38,31 +37,36 @@ export default function AdminDashboard() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Active view tab selected by clicking cards ('running' | 'completed' | 'enquiries')
   const [activeTab, setActiveTab] = useState<'running' | 'completed' | 'enquiries'>('running');
 
   const fetchDashboardData = async () => {
     setLoading(true);
 
     // 1. Fetch Running Projects
-    const { data: runningData } = await supabase
+    const { data: runningData, error: runErr } = await supabase
       .from('projects')
       .select('*')
       .in('status', ['running', 'RUNNING', 'in_progress', 'active'])
       .order('created_at', { ascending: false });
 
+    if (runErr) console.error('Running Projects Fetch Error:', runErr.message);
+
     // 2. Fetch Completed Projects
-    const { data: completedData } = await supabase
+    const { data: completedData, error: compErr } = await supabase
       .from('projects')
       .select('*')
       .in('status', ['completed', 'COMPLETED'])
       .order('created_at', { ascending: false });
 
-    // 3. Fetch Enquiries / Leads
-    const { data: leadsData } = await supabase
+    if (compErr) console.error('Completed Projects Fetch Error:', compErr.message);
+
+    // 3. Fetch Enquiries
+    const { data: leadsData, error: leadsErr } = await supabase
       .from('leads')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (leadsErr) console.error('Leads Fetch Error:', leadsErr.message);
 
     if (runningData) setRunningProjects(runningData as Project[]);
     if (completedData) setCompletedProjects(completedData as Project[]);
@@ -101,10 +105,10 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {/* --- STAT METRIC CARDS (CLICKABLE) --- */}
+        {/* METRIC CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* Card 1: Running Projects */}
+          {/* Running Projects */}
           <div
             onClick={() => setActiveTab('running')}
             className={`p-6 rounded-2xl border cursor-pointer transition transform hover:-translate-y-1 shadow-lg relative ${
@@ -135,7 +139,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Card 2: Completed Projects */}
+          {/* Completed Projects */}
           <div
             onClick={() => setActiveTab('completed')}
             className={`p-6 rounded-2xl border cursor-pointer transition transform hover:-translate-y-1 shadow-lg relative ${
@@ -166,7 +170,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Card 3: Total Enquiries */}
+          {/* Total Enquiries */}
           <div
             onClick={() => setActiveTab('enquiries')}
             className={`p-6 rounded-2xl border cursor-pointer transition transform hover:-translate-y-1 shadow-lg relative ${
@@ -199,7 +203,7 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* --- DYNAMIC PREVIEW DATA SECTION --- */}
+        {/* PREVIEW SECTION */}
         <div className="bg-slate-950 p-6 md:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-6">
           
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-800 pb-4">
@@ -210,7 +214,6 @@ export default function AdminDashboard() {
               {activeTab === 'enquiries' ? 'Total Enquiries' : `${activeTab} Projects`}
             </h2>
 
-            {/* Direct Navigation Button */}
             <Link
               href={getFullPageLink(activeTab)}
               className="text-xs font-extrabold uppercase tracking-wider text-[#0087A1] hover:underline flex items-center gap-1"
@@ -219,7 +222,7 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          {/* 1. RUNNING & COMPLETED PROJECTS LIST */}
+          {/* PROJECTS PREVIEW */}
           {(activeTab === 'running' || activeTab === 'completed') && (
             loading ? (
               <p className="text-sm text-slate-500 p-4">Loading preview data...</p>
@@ -242,7 +245,7 @@ export default function AdminDashboard() {
             )
           )}
 
-          {/* 2. TOTAL ENQUIRIES TABLE */}
+          {/* ENQUIRIES PREVIEW */}
           {activeTab === 'enquiries' && (
             loading ? (
               <p className="text-sm text-slate-500 p-4">Loading enquiries...</p>
