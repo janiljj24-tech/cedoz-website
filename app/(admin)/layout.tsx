@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
@@ -15,8 +16,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
+    try {
+      // 1. Sign out from Supabase
+      await supabase.auth.signOut();
+
+      // 2. Clear client-side storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. Redirect to Home Page
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -55,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
           
           {/* Dashboard */}
-          <a href="/dashboard" style={{ color: '#ffffff', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', backgroundColor: '#1e293b', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link href="/dashboard" style={{ color: '#ffffff', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', backgroundColor: '#1e293b', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ display: 'inline-grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2px', width: '16px', height: '16px', flexShrink: 0 }}>
               <span style={{ backgroundColor: 'currentColor', borderRadius: '1px' }}></span>
               <span style={{ backgroundColor: 'currentColor', borderRadius: '1px' }}></span>
@@ -63,15 +76,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span style={{ backgroundColor: 'currentColor', borderRadius: '1px' }}></span>
             </span>
             {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Dashboard</span>}
-          </a>
+          </Link>
           
           {/* Edit Content */}
-          <a href="/dashboard/content" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link href="/dashboard/content" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.75rem 1rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ width: '14px', height: '16px', border: '2px solid currentColor', borderRadius: '2px', position: 'relative', display: 'inline-block', flexShrink: 0, marginLeft: '1px' }}>
               <span style={{ position: 'absolute', top: '3px', left: '3px', width: '4px', height: '2px', backgroundColor: 'currentColor' }}></span>
             </span>
             {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Edit Content</span>}
-          </a>
+          </Link>
 
           {/* Projects Collapsible Parent */}
           <div>
@@ -89,21 +102,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Submenu Group */}
             {isProjectMenuOpen && isSidebarHovered && (
               <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                <a href="/dashboard/tenders" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <Link href="/dashboard/tenders" style={{ color: '#38bdf8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   📑 Tenders & Conversion
-                </a>
-                <a href="/dashboard/projects/create" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                </Link>
+                <Link href="/dashboard/projects/create" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   + Create Project
-                </a>
-                <a href="/dashboard/projects/running" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                </Link>
+                <Link href="/dashboard/projects/running" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   ⏳ Running Projects
-                </a>
-                <a href="/dashboard/projects/completed" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                </Link>
+                <Link href="/dashboard/projects/completed" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                   ✅ Completed Projects
-                </a>
-                <a href="/dashboard/leads" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                  📥 Inquiries
-                </a>
+                </Link>
+                <Link href="/dashboard/leads" style={{ color: '#94a3b8', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                  📥 Enquiries
+                </Link>
               </div>
             )}
           </div>
