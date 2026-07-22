@@ -110,6 +110,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Dashboard</span>}
           </Link>
 
+          {/* Edit Homepage */}
+          <Link 
+            href="/dashboard/home-editor" 
+            style={{ 
+              color: '#ffffff', 
+              textDecoration: 'none', 
+              padding: '0.75rem 1rem', 
+              borderRadius: '6px', 
+              backgroundColor: isActiveLink('/dashboard/home-editor') ? '#1e293b' : 'transparent', 
+              fontWeight: 500, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem' 
+            }}
+          >
+            <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>🌐</span>
+            {isSidebarHovered && <span style={{ whiteSpace: 'nowrap' }}>Edit Homepage</span>}
+          </Link>
+
           {/* Finance Collapsible Parent */}
           <div>
             <div 
