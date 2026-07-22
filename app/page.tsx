@@ -27,26 +27,26 @@ export default async function PublicHomePage() {
     <div style={{ fontFamily: 'system-ui, sans-serif', backgroundColor: '#f8fafc', color: '#0f172a', minHeight: '100vh' }}>
       
       {/* Hero / About Us Section */}
-      <section style={{ padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '3rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '300px' }}>
-          <h1 style={{ fontSize: '2.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '1.25rem' }}>
-            {content?.about_title || 'About Us'}
-          </h1>
-          <p style={{ fontSize: '1.15rem', color: '#475569', lineHeight: '1.7', whitespace: 'pre-line' }}>
-            {content?.about_description || 'Welcome to our platform.'}
-          </p>
-        </div>
+<section style={{ padding: '5rem 2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '3rem', alignItems: 'center', flexWrap: 'wrap' }}>
+  <div style={{ flex: 1, minWidth: '300px' }}>
+    <h1 style={{ fontSize: '2.75rem', fontWeight: '800', color: '#0369a1', marginBottom: '1.25rem' }}>
+      {content?.about_title || 'About Us'}
+    </h1>
+    <p style={{ fontSize: '1.15rem', color: '#475569', lineHeight: '1.7', whiteSpace: 'pre-line' }}>
+      {content?.about_description || 'Welcome to our platform.'}
+    </p>
+  </div>
 
-        {content?.about_image_url && (
-          <div style={{ flex: 1, minWidth: '300px' }}>
-            <img 
-              src={content.about_image_url} 
-              alt="About Us" 
-              style={{ width: '100%', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
-            />
-          </div>
-        )}
-      </section>
+  {content?.about_image_url && (
+    <div style={{ flex: 1, minWidth: '300px' }}>
+      <img 
+        src={content.about_image_url} 
+        alt="About Us" 
+        style={{ width: '100%', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+      />
+    </div>
+  )}
+</section>
 
       {/* Services Section */}
       {services.length > 0 && (
